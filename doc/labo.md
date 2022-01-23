@@ -2,13 +2,13 @@
 
 ## Inhoud
 
-0. Basis gebruik van de omgeving
-1. De knipperende led, gebruik van de microcontroller, RCC & GPIO (DONE)
+0. Basis gebruik van de omgeving **WIP**
+1. De knipperende led, gebruik van de microcontroller, RCC & GPIO 
 2. De klok, interrupts, NVIC & EXTI (7 SEG)
-3. De thermometer, ADC & Floating point getallen ()
-4. De timer, TIMER & PWM 
-5. De logger, UART & C Library
-6. De hellingsmeter, I2C
+3. De thermometer, ADC & Floating point getallen
+4. De timer, TIMER & PWM **WIP**
+5. De logger, UART & C Library **WIP**
+6. De hellingsmeter, I2C **WIP**
 7. De wifi scanner, SPI
 
 ### Labozitting

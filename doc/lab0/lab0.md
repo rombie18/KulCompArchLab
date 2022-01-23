@@ -162,23 +162,114 @@ Het 7 segment scherm in de gele cirkel wordt gemultiplext. Via de volgende pinne
 ### Buzzer & IO
 ![Blok diagramma](img/testboard_buz_io.jpg)
 
-### I2C
+De blauwe cirkel bevat de buzzer. Deze Buzzer moet via een 50% duty cycle PWM signaal worden aangestuurd.
+
+| Functie | GPIO | Pin |
+| ------- | ---- | --- |
+| Buzzer | GPIOB | Pin 8 |
+
+In de rode cirkel zijn twee aansluitingen voorzien die verbonding zijn met PA3 en PA4, dit zijn twee pinnen die verbonden zijn met ADC kanalen en de twee DAC kanalen.
+
+
+| Functie | GPIO | Pin |  ADC Kanaal |
+| ------- | ---- | --- | ----------- |
+| PA3 | GPIOA | Pin 1 | CH8 |
+| PA4  | GPIOA | Pin 0 | CH9 |
+
+### I2C & UART
 ![Blok diagramma](img/testboard_i2c.jpg)
+
+Op de PCB zijn enkele I2C apparaten gemonteerd:
+* Accelerometer, ADXL343BCCZ
+* Temperatuurs en luchtvochtigheidssensor, ENS210-LQFM
+* Li-ION batterij lader, MP2667GG
+
+Ook is deze I2C bus uitbreidbaar via de connector die omcirkeld is in het blauw.
+
+De Connector die omcirkeld is in het geel is een extra I2C of UART poort.
+
+| Functie | GPIO | Pin |
+| ------- | ---- | --- |
+| SCL | GPIOB | Pin 6 | 
+| SDA | GPIOB | Pin 7 |
+
+De extensie connector gebruik de volgende pinnen. 
+
+| Functie | GPIO | Pin | 
+| ------- | ---- | --- | 
+| PB11 | GPIOB | Pin 11 |
+| PB10 | GPIOB | Pin 10 |
 
 ### LR1110
 ![Blok diagramma](img/testboard_lr1110.jpg)
 
+Ook op het bordje staat een LR1110 van Semtech. Dit is een multifunctionele radio chip. Deze is verbonden met de SPI poort van de microcontroller. Deze radio heeft de volgende features:
+
+* 868 MHz zendontvanger, met LORA ondersteuning
+* 2.4 GHZ Wifi scanner, om te detecteren welke netwerken in de buurt zijn.
+* snapshot GPS ontvanger, welke voor een paar seconden GPS signal ontvangt en deze dan kan doorsturen via lora naar een centrale processor om dan een positie te kunnen berekenen. 
+
+De LR1110 is als volgt verbonden met de microcontroller
+
+| Functie | GPIO | Pin | 
+| ------- | ---- | --- | 
+| SCK  | GPIOB | Pin 3 |
+| MISO | GPIOB | Pin 4 |
+| MOSI | GPIOB | Pin 5 |
+| NSS | GPIOH | Pin 1 |
+| BUSY | GPIOC | Pin 15 |
+| IRQ | GPIOH | Pin 0 |
+| RESET | GPIOA | Pin 2 |
+
 ### Debugger
+
+De debugger die gebruiken om het bordje te programmeren is een STLINK-V3MINI. Met bijgeleverde flatcable kan je de debugger met de het testbordje verbinden.
+
+![Blok diagramma](img/MFG_STLINK-V3MINI.webp)
 
 ## Opdracht Compile and Debug
 
+1. Laad het project in de STM32CubeIDE
+2. Compile het project
+3. Stel de debugger in
+4. Debug het project op de microcontroller
+
 ### Project importeren
+
+Vanuit de documentatie van ST, moet je de volgende stappen ondernemen:
+
+1. File > New > Makefile project with Existing Code
+    1. Give a name
+    2. Point to the project location
+    3. Select MCU ARM GCC
+2. OK - you will now have to make sure that the makefile is found by the build system.
+    1. Hint, check: Project Properties > C/C++ Build > Builder Settings > Build directory
+3. Once you have a working makefile you probably want to debug as well...
+4. To make debug work the debugger integration needs to know which MCU you are targeting. Because of a known issue in CubeIDE 1.6.0, you have to perform a little stunt:
+    1. Project Properties > C/C++ Build > Builder Settings > Check "Generate Makefiles automatically".
+    2. Click Apply
+    3. WARNING: Do NOT build your project until step 7 is finished!! If you do, the managed build system will overwrite your makefiles!
+    4. This will expose a hidden GUI:
+    5. Project Properties > C/C++ Build > Settings > Tool Settings > MCU Settings > Select.
+        1. Browse for your MCU select it and click Apply.
+    6. Go back to Project Properties > C/C++ Build > Builder Settings > and Uncheck "Generate Makefiles automatically".
+    7. Click Apply.
+5. All done. If you create a debug config now you should be able to debug the target... If you instead tried to launch the debug session without performing step 4 you will get tons of errors messages...
+
+Als bovenstaande operatie geslaag is, zou je het volgende moeten zien.
+
+![IDE](img/cube1.PNG)
 
 ### Compilen
 
+![Blok diagramma](img/cube2_compile.PNG)
+
 ### Debuggen
+
+![Blok diagramma](img/cube3_debug.PNG)
 
 ### Registers bekijken
 
 ### Disassembly bekijken
 
+https://www.st.com/resource/en/user_manual/dm00629856-stm32cubeide-user-guide-stmicroelectronics.pdf
