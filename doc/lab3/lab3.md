@@ -77,7 +77,7 @@ Het ontwikkel bordje heeft de volgende mapping.
 | Potentionmeter | GPIOA | Pin 1 | CH5 |
 | NTC weerstand  | GPIOA | Pin 0 | CH6 |
 | PA3 connector  | GPIOA | Pin 3 | CH8 |
-| PA4  connector | GPIOA | Pin 4 | CH9 |
+| PA4 connector | GPIOA | Pin 4 | CH9 |
 
 ### ADC meting
 
@@ -110,3 +110,4 @@ Voor een software triggered meeting is het beste dat er maar 1 kanaal is ingeste
 
 2. Compile het programma met en zonder de floating point optie in de Makefile en bespreek kort het verschil tussen de disassembly van deze twee versies. Welke code is het meest efficiënt kwa programma size?
 
+### NTC

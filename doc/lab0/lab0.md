@@ -262,14 +262,40 @@ Als bovenstaande operatie geslaag is, zou je het volgende moeten zien.
 
 ### Compilen
 
-![Blok diagramma](img/cube2_compile.PNG)
+Zie 📌***USER-GUIDE-CUBEIDE62*** in de handleiding voor een uitgebreide uitleg.
+
+De code kan worden gecompiled doormiddel van op het [build] icoontje te klikken in de taakbalk of in het menu naar [Project] -> [Build project].
+
+![IDE](img/cube4_compile.PNG)
 
 ### Debuggen
 
-![Blok diagramma](img/cube3_debug.PNG)
+Zie 📌***USER-GUIDE-CUBEIDE126*** in de handleiding voor een uitgebreide uitleg.
 
-### Registers bekijken
+Men kan de debugger starten via volgende menu items, 
+![IDE](img/cube5_debug1.PNG)
 
-### Disassembly bekijken
+of
 
-https://www.st.com/resource/en/user_manual/dm00629856-stm32cubeide-user-guide-stmicroelectronics.pdf
+![IDE](img/cube5_debug2.PNG)
+
+Voor het debuggen programmeert de IDE de juiste firmware in de microcontroller en laad deze de nodig configuratie. 
+
+Tijdens het debuggen kan de volgende melding komen.
+
+![IDE](img/cube5_debug3.PNG)
+
+Het beste is als je "remember my decision" aan vinkt en op "switch" klikt. Dan staat de IDE altijd in de juiste instelling.
+
+
+Met de volgende knoppen kan je de debugger controleren. In de 📌***USER-GUIDE-CUBEIDE*** worden deze verschillende actie grondig uitgelegd.
+
+![IDE](img/cube5_debug4.PNG)
+![IDE](img/cube5_debug5.PNG)
+
+De debugger heeft nog verschillende mogelijkheden:
+
+* Bekijken van registers, 📌***USER-GUIDE-CUBEIDE179***, Special Function Registers (SFRs)
+* Breakpoints, 📌***USER-GUIDE-CUBEIDE146***
+* Dissamebly view, 📌***USER-GUIDE-CUBEIDE62***
+
