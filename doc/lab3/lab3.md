@@ -106,8 +106,7 @@ Voor een software triggered meeting is het beste dat er maar 1 kanaal is ingeste
 
 ## Opdracht
 
-1. Schrijf een C programma dat de temperatuur van de NTC weer geeft op het 7 Segment display in °C met een resolutie van 0.1 °C. 
+1. Schrijf een C programma dat de temperatuur van de NTC weer geeft op het 7 Segment display in °C met een resolutie van 0.1 °C. In de datasheet van de NTC staan de factoren die je nodig hebt om de conversie te doen van weerstand naar temperatuur.  
 
 2. Compile het programma met en zonder de floating point optie in de Makefile en bespreek kort het verschil tussen de disassembly van deze twee versies. Welke code is het meest efficiënt kwa programma size?
 
-### NTC

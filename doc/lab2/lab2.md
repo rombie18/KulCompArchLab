@@ -268,5 +268,3 @@ Voor die laatste optie heeft de microcontroller een aantal dingen ingebouwd in d
 
 2. Bekijk en bespreek de disassembly van de interrupt routine.
 
-### 7 Segment display & Multiplexing
-
