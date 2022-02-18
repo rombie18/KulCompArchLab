@@ -1,0 +1,6 @@
+"./src/interrupts.o"
+"./src/main.o"
+"./src/syscalls.o"
+"./src/sysmem.o"
+"./startup/startup_stm32l452ceux.o"
+"./startup/system.o"
