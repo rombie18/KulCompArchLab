@@ -1,19 +1,18 @@
 #include <stdint.h>
 #include <stm32l4xx.h>
+#include <math.h>
 
 /*** GLOBAL VARIABLES ***/
 char displayMux = 0;
 char display[4] = { 0 };
 volatile char tick = 0;
-unsigned int debounce = 0;
-unsigned int timecounter = 0;
 
 /*** FUNCTION PROTOTYPES ***/
 void init();
-void readButtons();
-void tickTime(char *display, char i);
+float readADC();
 void delay(const unsigned int);
-void convertNumber(char *display, const int number);
+void convertInt(char *display, const int number);
+void convertFloat(char *display, const float number);
 void convertTime(char *display, const int hours, const int minutes);
 void multiplexSegments(char *multiplexer, const char *value);
 void clearSegment();
@@ -25,28 +24,24 @@ int main(void) {
 
 	while (1) {
 		multiplexSegments(&displayMux, display);
-		readButtons();
 		if (tick) {
-			if (debounce > 0) {
-				debounce--;
-			}
-			if (timecounter > 0) {
-				timecounter--;
-			} else {
-				timecounter = 1000;
-				tickTime(display, 1);
-			}
+
+			convertFloat(display, readADC());
+
 		}
 		tick = 0;
 	}
 
 }
 
-void init() {
+void init(){
+	// Klok aanzetten
+	RCC->AHB2ENR |= RCC_AHB2ENR_ADCEN;
+
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
 
-	//7segmentjes
+	// 7segmentjes
 	GPIOA->MODER &= ~(GPIO_MODER_MODE7_Msk | GPIO_MODER_MODE5_Msk);
 	GPIOA->MODER |= (GPIO_MODER_MODE7_0 | GPIO_MODER_MODE5_0);
 	GPIOA->OTYPER &= ~(GPIO_OTYPER_OT7 | GPIO_OTYPER_OT5);
@@ -66,11 +61,9 @@ void init() {
 			| GPIO_MODER_MODE6_0);
 	GPIOA->OTYPER &= ~(GPIO_OTYPER_OT8 | GPIO_OTYPER_OT15 | GPIO_OTYPER_OT6);
 
-	//knoppen
-	// GPIOB Pin 14 configureren als input
-	GPIOB->MODER &= ~(GPIO_MODER_MODE13_Msk | GPIO_MODER_MODE14_Msk);
-	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPD13_Msk | GPIO_PUPDR_PUPD14_Msk);
-	GPIOB->PUPDR |= (GPIO_PUPDR_PUPD13_0 | GPIO_PUPDR_PUPD14_0);
+	// Klok selecteren, hier gebruiken we sysclk
+	RCC->CCIPR &= ~RCC_CCIPR_ADCSEL_Msk;
+	RCC->CCIPR |= RCC_CCIPR_ADCSEL_0 | RCC_CCIPR_ADCSEL_1;
 
 	// CPU Frequentie = 48 MHz
 	// Systick interrupt elke 1 ms (1kHz)  --> 48000000 Hz / 1000 Hz --> Reload = 48000
@@ -79,40 +72,43 @@ void init() {
 	// Interrupt aanzetten met een prioriteit van 128
 	NVIC_SetPriority(SysTick_IRQn, 128);
 	NVIC_EnableIRQ(SysTick_IRQn);
+
+	// Deep powerdown modus uitzetten
+	ADC1->CR &= ~ADC_CR_DEEPPWD;
+
+	// ADC voltage regulator aanzetten
+	ADC1->CR |= ADC_CR_ADVREGEN;
+
+	delay(4000);
+
+	// Kalibratie starten
+	ADC1->CR |= ADC_CR_ADCAL;
+	while(ADC1->CR & ADC_CR_ADCAL);
+
+	// ADC aanzetten
+	ADC1->CR |= ADC_CR_ADEN;
+
+	// Kanelen instellen
+	ADC1->SMPR1 = ADC_SMPR1_SMP5_0 || ADC_SMPR1_SMP5_1 || ADC_SMPR1_SMP5_2;
+	ADC1->SQR1 = 0x10000000;
 }
 
 void SysTick_Handler(void) {
 	tick = 1;
 }
 
-void readButtons() {
-	if (debounce == 0) {
-		if (!(GPIOB->IDR & GPIO_IDR_ID13)) {
-			tickTime(display, 1);
-			debounce = 500;
-		}
-		if (!(GPIOB->IDR & GPIO_IDR_ID14)) {
-			tickTime(display, 60);
-			debounce = 500;
-		}
-	}
-}
+float readADC() {
+	 // Start de ADC en wacht tot de sequentie klaar is
+	 ADC1->CR |= ADC_CR_ADSTART;
+	 while(!(ADC1->ISR & ADC_ISR_EOS));
 
-void tickTime(char *n, char i) {
-	char hour = n[0] * 10 + n[1];
-	char min = n[2] * 10 + n[3];
-	min += i;
-	if (min >= 60) {
-		min -= 60;
-		hour += 1;
-		if (hour > 23) {
-			hour -= 24;
-		}
-	}
-	n[0] = hour / 10;
-	n[1] = hour - n[0] * 10;
-	n[2] = min / 10;
-	n[3] = min - n[2] * 10;
+	 // Lees de waarde in
+	 float raw = ADC1->DR;
+	 float voltage = raw * 3.3f / 4096;
+	 float resistance = (10000 * voltage) / (3.3f - voltage);
+	 float temperature = 1 / ((log(resistance / 10000) / log(3936)) + (1 / 298.15f)) - 273.15f;
+
+	 return temperature;
 }
 
 /*** FUNCTIONS ***/
@@ -122,7 +118,7 @@ void delay(volatile unsigned int i) {
 	}
 }
 
-void convertNumber(char *display, const int number) {
+void convertInt(char *display, const int number) {
 	int temp = number;
 	char thousand = 0;
 	char hunderd = 0;
@@ -143,8 +139,12 @@ void convertNumber(char *display, const int number) {
 	display[3] = one;
 }
 
+void convertFloat(char *display, const float number) {
+	convertInt(display, (int) number * 100 + 0.5);
+}
+
 void convertTime(char *display, const int hours, const int minutes) {
-	convertNumber(display, hours * 100 + minutes);
+	convertInt(display, hours * 100 + minutes);
 }
 
 void multiplexSegments(char *mux, const char *value) {
