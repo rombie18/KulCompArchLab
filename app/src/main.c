@@ -6,7 +6,7 @@
 char displayMux = 0;
 char display[4] = { 0 };
 volatile char tick = 0;
-volatile int cycleCount = 0;
+volatile unsigned int cycleCount = 0;
 
 /*** FUNCTION PROTOTYPES ***/
 void init();
@@ -28,9 +28,9 @@ int main(void) {
 		multiplexSegments(&displayMux, display);
 		if (tick) {
 
-			if (cycleCount < 1000) {
+			if (cycleCount < 2000) {
 				convertFloat(display, readTemperature());
-			} else if (cycleCount < 2000) {
+			} else if (cycleCount < 4000) {
 				convertFloat(display, readPotmeter());
 			} else {
 				cycleCount = 0;
@@ -55,7 +55,6 @@ void init(){
 	//Klok selecteren, hier gebruiken we sysclk
 	RCC->CCIPR &= ~RCC_CCIPR_ADCSEL_Msk;
 	RCC->CCIPR |= RCC_CCIPR_ADCSEL_0 | RCC_CCIPR_ADCSEL_1;
-
 
 	//Deep powerdown modus uitzetten
 	ADC1->CR &= ~ADC_CR_DEEPPWD;
@@ -107,6 +106,7 @@ float readTemperature() {
 	ADC1->SMPR1 |= (ADC_SMPR1_SMP5_0 | ADC_SMPR1_SMP5_1 | ADC_SMPR1_SMP5_2); //111 traagste sample frequentie
 	ADC1->SQR1 &= ~(ADC_SQR1_L_0 | ADC_SQR1_L_1 | ADC_SQR1_L_2 | ADC_SQR1_L_3);
 	ADC1->SQR1 |= (ADC_SQR1_SQ1_2 | ADC_SQR1_SQ1_0);
+	ADC1->SQR1 &= ~(ADC_SQR1_SQ1_1 | ADC_SQR1_SQ1_3 | ADC_SQR1_SQ1_4);
 
 	// Start de ADC en wacht tot de sequentie klaar is
 	ADC1->CR |= ADC_CR_ADSTART;
@@ -126,6 +126,7 @@ float readPotmeter() {
 	ADC1->SMPR1 |= (ADC_SMPR1_SMP6_0 | ADC_SMPR1_SMP6_1 | ADC_SMPR1_SMP6_2); //111 traagste sample frequentie
 	ADC1->SQR1 &= ~(ADC_SQR1_L_0 | ADC_SQR1_L_1 | ADC_SQR1_L_2 | ADC_SQR1_L_3);
 	ADC1->SQR1 |= (ADC_SQR1_SQ1_2 | ADC_SQR1_SQ1_1); //00101
+	ADC1->SQR1 &= ~(ADC_SQR1_SQ1_0 | ADC_SQR1_SQ1_3 | ADC_SQR1_SQ1_4);
 
 	// Start de ADC en wacht tot de sequentie klaar is
 	ADC1->CR |= ADC_CR_ADSTART;
