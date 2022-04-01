@@ -35,62 +35,61 @@ int main(void) {
 }
 
 void init(){
-	// Klok aanzetten
+	//Klok aanzetten
 	RCC->AHB2ENR |= RCC_AHB2ENR_ADCEN;
+
+	//systick configureren en interupt aanzetten
+	SysTick_Config(48000);
+	NVIC_SetPriority(SysTick_IRQn, 128);
+	NVIC_EnableIRQ(SysTick_IRQn);
+
+	//Klok selecteren, hier gebruiken we sysclk
+	RCC->CCIPR &= ~RCC_CCIPR_ADCSEL_Msk;
+	RCC->CCIPR |= RCC_CCIPR_ADCSEL_0 | RCC_CCIPR_ADCSEL_1;
+
+
+	//Deep powerdown modus uitzetten
+	ADC1->CR &= ~ADC_CR_DEEPPWD;
+
+
+	//ADC voltage regulator aanzetten
+	ADC1->CR |= ADC_CR_ADVREGEN;
+
+	delay(2000);
+
+	//Kalibratie starten
+	ADC1->CR |= ADC_CR_ADCAL;
+	while(ADC1->CR & ADC_CR_ADCAL);
+
+	//ADC aanzetten
+	ADC1->CR |= ADC_CR_ADEN;
+
+	//Kanalen instellen
+	ADC1->SMPR1 |= (ADC_SMPR1_SMP5_0 | ADC_SMPR1_SMP5_1 | ADC_SMPR1_SMP5_2); //111 traagste sample frequentie
+	ADC1->SQR1 &= ~(ADC_SQR1_L_0 | ADC_SQR1_L_1 | ADC_SQR1_L_2 | ADC_SQR1_L_3);
+	ADC1->SQR1 |= (ADC_SQR1_SQ1_2 | ADC_SQR1_SQ1_0); //00101
+
 
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
 
-	// 7segmentjes
+	// 7 segmenten aanzetten (als output declareren) en laag maken
 	GPIOA->MODER &= ~(GPIO_MODER_MODE7_Msk | GPIO_MODER_MODE5_Msk);
 	GPIOA->MODER |= (GPIO_MODER_MODE7_0 | GPIO_MODER_MODE5_0);
 	GPIOA->OTYPER &= ~(GPIO_OTYPER_OT7 | GPIO_OTYPER_OT5);
 
-	GPIOB->MODER &= ~(GPIO_MODER_MODE0_Msk | GPIO_MODER_MODE12_Msk
-			| GPIO_MODER_MODE15_Msk | GPIO_MODER_MODE1_Msk
-			| GPIO_MODER_MODE2_Msk);
-	GPIOB->MODER |= (GPIO_MODER_MODE0_0 | GPIO_MODER_MODE12_0
-			| GPIO_MODER_MODE15_0 | GPIO_MODER_MODE1_0 | GPIO_MODER_MODE2_0);
-	GPIOB->OTYPER &= ~(GPIO_OTYPER_OT0 | GPIO_OTYPER_OT12 | GPIO_OTYPER_OT15
-			| GPIO_OTYPER_OT1 | GPIO_OTYPER_OT2);
+	GPIOB->MODER &= ~(GPIO_MODER_MODE0_Msk | GPIO_MODER_MODE12_Msk | GPIO_MODER_MODE15_Msk | GPIO_MODER_MODE1_Msk | GPIO_MODER_MODE2_Msk);
+	GPIOB->MODER |= (GPIO_MODER_MODE0_0 | GPIO_MODER_MODE12_0 | GPIO_MODER_MODE15_0 | GPIO_MODER_MODE1_0 | GPIO_MODER_MODE2_0);
+	GPIOB->OTYPER &= ~(GPIO_OTYPER_OT0 | GPIO_OTYPER_OT12 | GPIO_OTYPER_OT15 | GPIO_OTYPER_OT1 | GPIO_OTYPER_OT2);
 
-	//mux + punt
-	GPIOA->MODER &= ~(GPIO_MODER_MODE8_Msk | GPIO_MODER_MODE15_Msk
-			| GPIO_MODER_MODE6_Msk);
-	GPIOA->MODER |= (GPIO_MODER_MODE8_0 | GPIO_MODER_MODE15_0
-			| GPIO_MODER_MODE6_0);
+	//mux en punt aansturen
+	GPIOA->MODER &= ~(GPIO_MODER_MODE8_Msk | GPIO_MODER_MODE15_Msk | GPIO_MODER_MODE6_Msk);
+	GPIOA->MODER |= (GPIO_MODER_MODE8_0 | GPIO_MODER_MODE15_0 | GPIO_MODER_MODE6_0);
 	GPIOA->OTYPER &= ~(GPIO_OTYPER_OT8 | GPIO_OTYPER_OT15 | GPIO_OTYPER_OT6);
 
-	// Klok selecteren, hier gebruiken we sysclk
-	RCC->CCIPR &= ~RCC_CCIPR_ADCSEL_Msk;
-	RCC->CCIPR |= RCC_CCIPR_ADCSEL_0 | RCC_CCIPR_ADCSEL_1;
-
-	// CPU Frequentie = 48 MHz
-	// Systick interrupt elke 1 ms (1kHz)  --> 48000000 Hz / 1000 Hz --> Reload = 48000
-	SysTick_Config(48000);
-
-	// Interrupt aanzetten met een prioriteit van 128
-	NVIC_SetPriority(SysTick_IRQn, 128);
-	NVIC_EnableIRQ(SysTick_IRQn);
-
-	// Deep powerdown modus uitzetten
-	ADC1->CR &= ~ADC_CR_DEEPPWD;
-
-	// ADC voltage regulator aanzetten
-	ADC1->CR |= ADC_CR_ADVREGEN;
-
-	delay(4000);
-
-	// Kalibratie starten
-	ADC1->CR |= ADC_CR_ADCAL;
-	while(ADC1->CR & ADC_CR_ADCAL);
-
-	// ADC aanzetten
-	ADC1->CR |= ADC_CR_ADEN;
-
-	// Kanelen instellen
-	ADC1->SMPR1 = ADC_SMPR1_SMP5_0 || ADC_SMPR1_SMP5_1 || ADC_SMPR1_SMP5_2;
-	ADC1->SQR1 = 0x10000000;
+	//NTC
+	GPIOA->MODER &= ~GPIO_MODER_MODE0_Msk;
+	GPIOA->MODER |= GPIO_MODER_MODE0_0 | GPIO_MODER_MODE0_1;
 }
 
 void SysTick_Handler(void) {
@@ -104,9 +103,9 @@ float readADC() {
 
 	 // Lees de waarde in
 	 float raw = ADC1->DR;
-	 float voltage = raw * 3.3f / 4096;
-	 float resistance = (10000 * voltage) / (3.3f - voltage);
-	 float temperature = 1 / ((log(resistance / 10000) / log(3936)) + (1 / 298.15f)) - 273.15f;
+	 float voltage = (raw * 3.0f)/4096.0f;
+	 float resistance = (10000.0f * voltage)/(3.0f-voltage);
+	 float temperature = ((1.0f/((logf(resistance/10000.0f)/3936.0f)+(1.0f/298.15f)))-273.15f)*10;
 
 	 return temperature;
 }
@@ -140,7 +139,7 @@ void convertInt(char *display, const int number) {
 }
 
 void convertFloat(char *display, const float number) {
-	convertInt(display, (int) number * 100 + 0.5);
+	convertInt(display, (int) number * 10.0f);
 }
 
 void convertTime(char *display, const int hours, const int minutes) {
