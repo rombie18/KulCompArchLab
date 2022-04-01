@@ -6,10 +6,12 @@
 char displayMux = 0;
 char display[4] = { 0 };
 volatile char tick = 0;
+volatile int cycleCount = 0;
 
 /*** FUNCTION PROTOTYPES ***/
 void init();
-float readADC();
+float readTemperature();
+float readPotmeter();
 void delay(const unsigned int);
 void convertInt(char *display, const int number);
 void convertFloat(char *display, const float number);
@@ -26,7 +28,14 @@ int main(void) {
 		multiplexSegments(&displayMux, display);
 		if (tick) {
 
-			convertFloat(display, readADC());
+			if (cycleCount < 1000) {
+				convertFloat(display, readTemperature());
+			} else if (cycleCount < 2000) {
+				convertFloat(display, readPotmeter());
+			} else {
+				cycleCount = 0;
+			}
+			cycleCount++;
 
 		}
 		tick = 0;
@@ -64,14 +73,11 @@ void init(){
 	//ADC aanzetten
 	ADC1->CR |= ADC_CR_ADEN;
 
-	//Kanalen instellen
-	ADC1->SMPR1 |= (ADC_SMPR1_SMP5_0 | ADC_SMPR1_SMP5_1 | ADC_SMPR1_SMP5_2); //111 traagste sample frequentie
-	ADC1->SQR1 &= ~(ADC_SQR1_L_0 | ADC_SQR1_L_1 | ADC_SQR1_L_2 | ADC_SQR1_L_3);
-	ADC1->SQR1 |= (ADC_SQR1_SQ1_2 | ADC_SQR1_SQ1_0); //00101
-
-
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
+
+	//Timer
+	RCC->AHB2ENR |= RCC_APB2ENR_TIM16EN;
 
 	// 7 segmenten aanzetten (als output declareren) en laag maken
 	GPIOA->MODER &= ~(GPIO_MODER_MODE7_Msk | GPIO_MODER_MODE5_Msk);
@@ -96,18 +102,40 @@ void SysTick_Handler(void) {
 	tick = 1;
 }
 
-float readADC() {
-	 // Start de ADC en wacht tot de sequentie klaar is
-	 ADC1->CR |= ADC_CR_ADSTART;
-	 while(!(ADC1->ISR & ADC_ISR_EOS));
+float readTemperature() {
+	//Kanalen instellen
+	ADC1->SMPR1 |= (ADC_SMPR1_SMP5_0 | ADC_SMPR1_SMP5_1 | ADC_SMPR1_SMP5_2); //111 traagste sample frequentie
+	ADC1->SQR1 &= ~(ADC_SQR1_L_0 | ADC_SQR1_L_1 | ADC_SQR1_L_2 | ADC_SQR1_L_3);
+	ADC1->SQR1 |= (ADC_SQR1_SQ1_2 | ADC_SQR1_SQ1_0);
 
-	 // Lees de waarde in
-	 float raw = ADC1->DR;
-	 float voltage = (raw * 3.0f)/4096.0f;
-	 float resistance = (10000.0f * voltage)/(3.0f-voltage);
-	 float temperature = ((1.0f/((logf(resistance/10000.0f)/3936.0f)+(1.0f/298.15f)))-273.15f)*10;
+	// Start de ADC en wacht tot de sequentie klaar is
+	ADC1->CR |= ADC_CR_ADSTART;
+	while(!(ADC1->ISR & ADC_ISR_EOS));
 
-	 return temperature;
+	// Lees de waarde in
+	float raw = ADC1->DR;
+	float voltage = (raw * 3.0f)/4096.0f;
+	float resistance = (10000.0f * voltage)/(3.0f-voltage);
+	float temperature = (1.0f/((logf(resistance/10000.0f)/3936.0f)+(1.0f/298.15f)))-273.15f;
+
+	return temperature;
+}
+
+float readPotmeter() {
+	//Kanalen instellen
+	ADC1->SMPR1 |= (ADC_SMPR1_SMP6_0 | ADC_SMPR1_SMP6_1 | ADC_SMPR1_SMP6_2); //111 traagste sample frequentie
+	ADC1->SQR1 &= ~(ADC_SQR1_L_0 | ADC_SQR1_L_1 | ADC_SQR1_L_2 | ADC_SQR1_L_3);
+	ADC1->SQR1 |= (ADC_SQR1_SQ1_2 | ADC_SQR1_SQ1_1); //00101
+
+	// Start de ADC en wacht tot de sequentie klaar is
+	ADC1->CR |= ADC_CR_ADSTART;
+	while(!(ADC1->ISR & ADC_ISR_EOS));
+
+	// Lees de waarde in
+	float raw = ADC1->DR;
+	float voltage = (raw * 3.0f)/4096.0f;
+
+	return voltage;
 }
 
 /*** FUNCTIONS ***/
@@ -139,7 +167,7 @@ void convertInt(char *display, const int number) {
 }
 
 void convertFloat(char *display, const float number) {
-	convertInt(display, (int) number * 10.0f);
+	convertInt(display, (int) (number * 100.0f));
 }
 
 void convertTime(char *display, const int hours, const int minutes) {
