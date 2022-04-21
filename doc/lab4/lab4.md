@@ -67,5 +67,6 @@ Een tweede mogelijkheid is de compare functionaliteit te gebruiken. Dit laat de 
 1. Breid het programma van lab3 uit zodat de buzzer een signaal geeft als de temperatuur boven een bepaalde drempelwaarde komt. Deze drempelwaarde kan men instellen via de potmeter.
 	* Verander de code zo dat de buzzer een "Tuut ta Tuut ta" melodie maakt.
 	* Leg uit hoe de configuratie van de timer in elkaar zit voor deze toepassing. Bespreek de hoe je die configureert. 
-	* Wat bedoelen ze met de alternate mode van de GPIO 
+	* Wat bedoelen ze met de alternate mode van de GPIOls
+	 
 
