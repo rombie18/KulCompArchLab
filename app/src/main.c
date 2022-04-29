@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stm32l4xx.h>
 #include <math.h>
+#include <stdio.h>
 
 /*** GLOBAL VARIABLES ***/
 char displayMux = 0;
@@ -22,11 +23,21 @@ int main(void) {
 
 	init();
 
+	volatile int timer = 1000;
+
 	while (1) {
 		multiplexSegments(&displayMux, display);
 		if (tick) {
 
-			convertFloat(display, readADC());
+			volatile float temperature = readADC();
+			convertFloat(display, temperature);
+
+			if (timer == 0) {
+				printf("T:%f\r\n", temperature);
+				timer = 1000;
+			} else {
+				timer--;
+			}
 
 		}
 		tick = 0;
@@ -37,6 +48,8 @@ int main(void) {
 void init(){
 	//Klok aanzetten
 	RCC->AHB2ENR |= RCC_AHB2ENR_ADCEN;
+	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
+	RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
 
 	//systick configureren en interupt aanzetten
 	SysTick_Config(48000);
@@ -90,6 +103,27 @@ void init(){
 	//NTC
 	GPIOA->MODER &= ~GPIO_MODER_MODE0_Msk;
 	GPIOA->MODER |= GPIO_MODER_MODE0_0 | GPIO_MODER_MODE0_1;
+
+	//serial bus
+	GPIOA->MODER &= ~GPIO_MODER_MODE9_Msk;
+	GPIOA->MODER |=  GPIO_MODER_MODE9_1;
+	GPIOA->OTYPER &= ~GPIO_OTYPER_OT9;
+	GPIOA->AFR[1] = (GPIOA->AFR[1] & (~GPIO_AFRH_AFSEL9_Msk)) | (0x7 << GPIO_AFRH_AFSEL9_Pos);
+
+	GPIOA->MODER &= ~GPIO_MODER_MODE10_Msk;
+	GPIOA->AFR[1] = (GPIOA->AFR[1] & (~GPIO_AFRH_AFSEL10_Msk)) | (0x7 << GPIO_AFRH_AFSEL10_Pos);
+
+	//uart
+	USART1->CR1 = 0;
+	USART1->CR2 = 0;
+	USART1->CR3 = 0;
+	USART1->BRR = 417;
+	USART1->CR1 = USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+}
+
+int __io_putchar(int ch){
+    while(!(USART1->ISR & USART_ISR_TXE));
+    USART1->TDR = ch;
 }
 
 void SysTick_Handler(void) {
@@ -105,7 +139,7 @@ float readADC() {
 	 float raw = ADC1->DR;
 	 float voltage = (raw * 3.0f)/4096.0f;
 	 float resistance = (10000.0f * voltage)/(3.0f-voltage);
-	 float temperature = ((1.0f/((logf(resistance/10000.0f)/3936.0f)+(1.0f/298.15f)))-273.15f)*10;
+	 float temperature = ((1.0f/((logf(resistance/10000.0f)/3936.0f)+(1.0f/298.15f)))-273.15f);
 
 	 return temperature;
 }
@@ -139,7 +173,7 @@ void convertInt(char *display, const int number) {
 }
 
 void convertFloat(char *display, const float number) {
-	convertInt(display, (int) number * 10.0f);
+	convertInt(display, (int) number * 100.0f);
 }
 
 void convertTime(char *display, const int hours, const int minutes) {
