@@ -33,7 +33,7 @@ int main(void) {
 			convertFloat(display, temperature);
 
 			if (timer == 0) {
-				printf("T:%f\r\n", temperature);
+				printf("T:%.2f\r\n", temperature);
 				timer = 1000;
 			} else {
 				timer--;
