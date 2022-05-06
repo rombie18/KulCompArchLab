@@ -9,8 +9,6 @@ volatile char tick = 0;
 
 /*** FUNCTION PROTOTYPES ***/
 void init();
-float readTemperature();
-float readPotmeter();
 void delay(const unsigned int);
 void convertInt(char *display, const int number);
 void convertFloat(char *display, const float number);
@@ -18,71 +16,32 @@ void convertTime(char *display, const int hours, const int minutes);
 void multiplexSegments(char *multiplexer, const char *value);
 void clearSegment();
 void showSegment(char character, char dot);
-void soundBuzzer(float threshold, float value);
 
 int main(void) {
 
 	init();
 
-	volatile float settemp = 0;
-	volatile float temp = 0;
-	int flag;
 	while (1) {
-
-		temp = readTemperature();
-		settemp = readPotmeter();
-
-		soundBuzzer(settemp, temp);
 
 		multiplexSegments(&displayMux, display);
 		if (tick) {
 
-			if(flag>0){
-				convertFloat(display, settemp);
-				flag --;
-			}else{
-				convertFloat(display, temp);
-				flag = 1500;
-			}
+			convertFloat(display, 20.32f);
+
 		}
 		tick = 0;
 	}
 }
 
 void init() {
-	//Klok aanzetten
-	RCC->AHB2ENR |= RCC_AHB2ENR_ADCEN;
 
 	//systick configureren en interupt aanzetten
 	SysTick_Config(48000);
 	NVIC_SetPriority(SysTick_IRQn, 128);
 	NVIC_EnableIRQ(SysTick_IRQn);
 
-	//Klok selecteren, hier gebruiken we sysclk
-	RCC->CCIPR &= ~RCC_CCIPR_ADCSEL_Msk;
-	RCC->CCIPR |= RCC_CCIPR_ADCSEL_0 | RCC_CCIPR_ADCSEL_1;
-
-	//Deep powerdown modus uitzetten
-	ADC1->CR &= ~ADC_CR_DEEPPWD;
-
-	//ADC voltage regulator aanzetten
-	ADC1->CR |= ADC_CR_ADVREGEN;
-
-	delay(2000);
-
-	//Kalibratie starten
-	ADC1->CR |= ADC_CR_ADCAL;
-	while (ADC1->CR & ADC_CR_ADCAL)
-		;
-
-	//ADC aanzetten
-	ADC1->CR |= ADC_CR_ADEN;
-
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
 	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
-
-	//Timer
-	RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;
 
 	// 7 segmenten aanzetten (als output declareren) en laag maken
 	GPIOA->MODER &= ~(GPIO_MODER_MODE7_Msk | GPIO_MODER_MODE5_Msk);
@@ -104,82 +63,39 @@ void init() {
 			| GPIO_MODER_MODE6_0);
 	GPIOA->OTYPER &= ~(GPIO_OTYPER_OT8 | GPIO_OTYPER_OT15 | GPIO_OTYPER_OT6);
 
-	//NTC
-	GPIOA->MODER &= ~GPIO_MODER_MODE0_Msk;
-	GPIOA->MODER |= GPIO_MODER_MODE0_0 | GPIO_MODER_MODE0_1;
+	// I2C
+	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
+	RCC->APB1ENR1 |= RCC_APB1ENR1_I2C1EN;
 
-	// BUZZER
-	GPIOB->MODER &= ~GPIO_MODER_MODE8_Msk;
-	GPIOB->MODER |= GPIO_MODER_MODE8_1;
-	GPIOB->OTYPER &= ~GPIO_OTYPER_OT8;
-	GPIOB->AFR[1] = (GPIOB->AFR[1] & (~GPIO_AFRH_AFSEL8_Msk))
-			| (0xE << GPIO_AFRH_AFSEL8_Pos);
+	// GPIO alternative mode
+	GPIOB->MODER &= ~GPIO_MODER_MODE6_Msk;
+	GPIOB->MODER |=  GPIO_MODER_MODE6_1;
+	GPIOB->OTYPER |= GPIO_OTYPER_OT6;
+	GPIOB->AFR[0] = (GPIOB->AFR[0] & (~GPIO_AFRL_AFSEL6_Msk)) | (0x4 << GPIO_AFRL_AFSEL6_Pos);
 
-	TIM16->PSC = 0;
-	TIM16->ARR = 24000;
-	TIM16->CCR1 = 12000;
+	GPIOB->MODER &= ~GPIO_MODER_MODE7_Msk;
+	GPIOB->MODER |=  GPIO_MODER_MODE7_1;
+	GPIOB->OTYPER |= GPIO_OTYPER_OT7;
+	GPIOB->AFR[0] = (GPIOB->AFR[0] & (~GPIO_AFRL_AFSEL7_Msk)) | (0x4 << GPIO_AFRL_AFSEL7_Pos);
+
+	// I2C 100kHz clock
+	I2C1->TIMINGR = 0x20303E5D;
+	I2C1->CR2 |= (I2C_CR2_AUTOEND | I2C_CR2_NACK);
+	I2C1->CR1 |= I2C_CR1_PE;
+
+	POWER_CTL = '0b00001000';
+
+	GPIOB->MODER |=
 
 }
+
+
+void write_register()
 
 void SysTick_Handler(void) {
 	tick = 1;
 }
 
-void soundBuzzer(float threshold, float value) {
-	TIM16->CCMR1 &= ~TIM_CCMR1_CC1S;
-	TIM16->CCMR1 |= TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1FE;
-	TIM16->CCER |= TIM_CCER_CC1E;
-	TIM16->CCER &= ~TIM_CCER_CC1P;
-	TIM16->CR1 |= TIM_CR1_CEN;
-
-	if (value > threshold) {
-		TIM16->BDTR |= TIM_BDTR_MOE;
-	} else {
-		TIM16->BDTR &= ~TIM_BDTR_MOE;
-	}
-}
-
-float readTemperature() {
-	//Kanalen instellen
-	ADC1->SMPR1 |= (ADC_SMPR1_SMP5_0 | ADC_SMPR1_SMP5_1 | ADC_SMPR1_SMP5_2); //111 traagste sample frequentie
-	ADC1->SQR1 &= ~(ADC_SQR1_L_0 | ADC_SQR1_L_1 | ADC_SQR1_L_2 | ADC_SQR1_L_3);
-	ADC1->SQR1 |= (ADC_SQR1_SQ1_2 | ADC_SQR1_SQ1_0); //00101
-	ADC1->SQR1 &= ~(ADC_SQR1_SQ1_1 | ADC_SQR1_SQ1_3 | ADC_SQR1_SQ1_4);
-
-	// Start de ADC en wacht tot de sequentie klaar is
-	ADC1->CR |= ADC_CR_ADSTART;
-	while (!(ADC1->ISR & ADC_ISR_EOS))
-		;
-
-	// Lees de waarde in
-	float raw = ADC1->DR;
-	float voltage = (raw * 3.0f) / 4096.0f;
-	float resistance = (10000.0f * voltage) / (3.0f - voltage);
-	float temperature = (1.0f
-			/ ((logf(resistance / 10000.0f) / 3936.0f) + (1.0f / 298.15f)))
-			- 273.15f;
-
-	return temperature;
-}
-
-float readPotmeter() {
-	//Kanalen instellen
-	ADC1->SMPR1 |= (ADC_SMPR1_SMP6_0 | ADC_SMPR1_SMP6_1 | ADC_SMPR1_SMP6_2); //111 traagste sample frequentie
-	ADC1->SQR1 &= ~(ADC_SQR1_L_0 | ADC_SQR1_L_1 | ADC_SQR1_L_2 | ADC_SQR1_L_3);
-	ADC1->SQR1 |= (ADC_SQR1_SQ1_2 | ADC_SQR1_SQ1_1);
-	ADC1->SQR1 &= ~(ADC_SQR1_SQ1_0 | ADC_SQR1_SQ1_3 | ADC_SQR1_SQ1_4);
-
-	// Start de ADC en wacht tot de sequentie klaar is
-	ADC1->CR |= ADC_CR_ADSTART;
-	while (!(ADC1->ISR & ADC_ISR_EOS))
-		;
-
-	// Lees de waarde in
-	float raw = ADC1->DR;
-	float temperature = raw / 4069.0f * 20.0f + 20.0f;
-
-	return temperature;
-}
 
 /*** FUNCTIONS ***/
 void delay(volatile unsigned int i) {
