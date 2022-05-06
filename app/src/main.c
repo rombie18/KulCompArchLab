@@ -39,7 +39,7 @@ int main(void) {
 
 			if(flag>0){
 				convertFloat(display, settemp);
-				flag --;
+				flag--;
 			}else{
 				convertFloat(display, temp);
 				flag = 1500;

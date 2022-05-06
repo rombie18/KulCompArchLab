@@ -55,7 +55,7 @@ BIN = $(CP) -O binary -S
 #######################################
 CPU = -mcpu=cortex-m4
 FPU = -mfpu=fpv4-sp-d16
-FLOAT-ABI = -mfloat-abi=soft
+FLOAT-ABI = -mfloat-abi=hard
 MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
 
 AS_DEFS = 
