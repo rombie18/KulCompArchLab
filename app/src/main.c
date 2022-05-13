@@ -83,14 +83,20 @@ void init() {
 	I2C1->CR2 |= (I2C_CR2_AUTOEND | I2C_CR2_NACK);
 	I2C1->CR1 |= I2C_CR1_PE;
 
-	POWER_CTL = '0b00001000';
+	I2C1->CR2 |=
 
-	GPIOB->MODER |=
+
 
 }
 
 
-void write_register()
+void write_register() {
+
+}
+
+void read_register() {
+
+}
 
 void SysTick_Handler(void) {
 	tick = 1;
