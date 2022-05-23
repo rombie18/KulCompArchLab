@@ -26,7 +26,7 @@ int main(void) {
 		multiplexSegments(&displayMux, display);
 		if (tick) {
 
-			convertFloat(display, 20.32f);
+			convertFloat(display, read_accel(0x32));
 
 		}
 		tick = 0;
@@ -83,19 +83,53 @@ void init() {
 	I2C1->CR2 |= (I2C_CR2_AUTOEND | I2C_CR2_NACK);
 	I2C1->CR1 |= I2C_CR1_PE;
 
-	I2C1->CR2 |=
-
-
-
 }
 
+void write_accel(int data, int reg){
+        I2C1->CR2 &= ~(1<<10);//enable write mode
+        I2C1->CR2 |= I2C_CR2_NACK_Msk;
+        I2C1->CR2 |=  (1 << 13)|(2 << 16)|(0x53 << 1); //grote te verzende paket, conencted device,
+        while((I2C1->ISR & (1<<4)) == 0 && (I2C1->ISR & (1<<1)) == 0);
+         //NACKF = 0, TXIS = 0
+        if((I2C1->ISR & (1<<4)) != 0){ //NACKF = 1
+            return;
+        }
 
-void write_register() {
+        I2C1->TXDR = reg;//register doorsturen
 
+        while(I2C1->ISR & (1<<4) == 0 && I2C1->ISR & (1<<1) == 0){};
+             //NACKF = 0, TXIS = 0
+        if((I2C1->ISR & (1<<4)) != 0){ //NACKF = 1
+            return;
+        }
+        I2C1->TXDR = data;
+        while((I2C1->ISR & I2C_ISR_STOPF) == 0);
 }
 
-void read_register() {
+int read_accel(int reg){
+    while((I2C1->ISR & I2C_ISR_BUSY));
+    I2C1->CR2 &= ~(1<<10);//enable write mode
+    I2C1->CR2 &= ~I2C_CR2_AUTOEND_Msk;
+    I2C1->CR2 &= ~I2C_CR2_NBYTES_Msk;
+    I2C1->CR2 |= I2C_CR2_NACK_Msk;
+    I2C1->CR2 |=  (1 << 13)|(1 << 16)|(0x53 << 1); //grote te verzende paket, conencted device,
+    while(((I2C1->ISR & (1<<4)) == 0) && ((I2C1->ISR & (1<<1)) == 0)){};
+     //NACKF = 0, TXIS = 0
+    if((I2C1->ISR & (1<<4)) != 0){ //NACKF = 1
+        return;
+    }
 
+    I2C1->TXDR = reg;//register doorsturen
+    while((I2C1->ISR & (1<<6)) == 0);
+
+    I2C1->CR2 |= I2C_CR2_AUTOEND_Msk;
+    I2C1->CR2 |= (1<<10);//enable read mode
+    //read
+    I2C1->CR2 |=  (1 << 16)|(0x53 << 1); //grote te verzende paket, conencted device,
+    I2C1->CR2 |= (1<<13);
+    while(!(I2C1->ISR & I2C_ISR_RXNE));
+
+    return I2C1->RXDR;
 }
 
 void SysTick_Handler(void) {
